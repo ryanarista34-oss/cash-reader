@@ -1,0 +1,25 @@
+description: Ultralytics YOLO11s model trained on /kaggle/working/cash-reader-3currency-1/data.yaml
+author: Ultralytics
+date: '2026-06-22T21:01:06.655853'
+version: 8.4.37
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: dua puluh ribu
+  1: dua ribu
+  2: lima puluh ribu
+  3: lima ribu
+  4: sepuluh ribu
+  5: seratus ribu
+  6: seribu
+args:
+  batch: 1
+  half: false
+channels: 3
+end2end: false
