@@ -1,0 +1,22 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBnee65xFUaq5VHwnVki9daqu-_8Fvpetw",
+  authDomain: "cash-reader-claude.firebaseapp.com",
+  databaseURL: "https://cash-reader-claude-default-rtdb.firebaseio.com",
+  projectId: "cash-reader-claude",
+  storageBucket: "cash-reader-claude.firebasestorage.app",
+  messagingSenderId: "938352095816",
+  appId: "1:938352095816:web:34abc4403a04af43af1e7d",
+  measurementId: "G-BTGWSKB4F6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
