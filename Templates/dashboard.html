@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cash Reader — Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+* { box-sizing: border-box; }
+body { background: #0a0e1a; color: #e0e8ff; font-family: 'Courier New', monospace; margin: 0; }
+.topbar { background: #0d1225; border-bottom: 1px solid #1e3a5f; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+.logo-dot { width: 10px; height: 10px; border-radius: 50%; background: #00ff88; display: inline-block; animation: pulse 2s infinite; margin-right: 8px; }
+.logo-text { color: #00ff88; font-size: 14px; font-weight: bold; letter-spacing: 3px; }
+.logo-sub { color: #2a4a6f; font-size: 10px; letter-spacing: 2px; margin-left: 8px; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.nav-link-custom { color: #4a6fa5; font-size: 11px; text-decoration: none; letter-spacing: 1px; padding: 6px 12px; border: 1px solid #1e3a5f; border-radius: 6px; }
+.nav-link-custom:hover { color: #00ff88; border-color: #00ff88; }
+.panel { background: #0d1225; border: 1px solid #1e3a5f; border-radius: 10px; padding: 16px; height: 100%; }
+.panel-title { font-size: 10px; letter-spacing: 2px; color: #4a6fa5; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #1e3a5f; display: flex; justify-content: space-between; align-items: center; }
+.metric-card { background: #0d1225; border: 1px solid #1e3a5f; border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
+.metric-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+.mc-green::before { background:#00ff88; }
+.mc-blue::before  { background:#378add; }
+.mc-amber::before { background:#ffaa00; }
+.mc-pink::before  { background:#d4537e; }
+.metric-label { font-size:9px; letter-spacing:2px; color:#2a4a6f; margin-bottom:8px; }
+.metric-value { font-size:26px; font-weight:bold; color:#e0e8ff; line-height:1; }
+.metric-unit  { font-size:11px; color:#4a6fa5; margin-left:4px; }
+.metric-sub   { font-size:10px; margin-top:6px; color:#4a6fa5; }
+.log-table { width:100%; font-size:11px; border-collapse:collapse; }
+.log-table th { color:#2a4a6f; font-size:9px; letter-spacing:2px; padding:6px 8px; text-align:left; border-bottom:1px solid #1e3a5f; }
+.log-table td { padding:8px; border-bottom:1px solid #0f1930; }
+.log-table tr:hover td { background:#0f1930; }
+.currency-badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:10px; letter-spacing:1px; font-weight:bold; }
+.idr { background:#0a1f0f; color:#00ff88; border:1px solid #00ff8844; }
+.myr { background:#0a1525; color:#378add; border:1px solid #378add44; }
+.sgd { background:#1a1200; color:#ffaa00; border:1px solid #ffaa0044; }
+.conf-bar { height:4px; border-radius:2px; background:#1e3a5f; margin-top:4px; }
+.conf-fill { height:100%; border-radius:2px; }
+.acc-bar { height:6px; border-radius:3px; background:#1e3a5f; margin-bottom:12px; }
+.acc-fill { height:100%; border-radius:3px; transition: width 0.5s ease; }
+.device-card { background:#080d1a; border:1px solid #1e3a5f; border-radius:8px; padding:12px; margin-bottom:8px; display:flex; align-items:center; gap:12px; }
+.device-icon { width:36px; height:36px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:18px; background:#0a1f0f; border:1px solid #00ff8833; }
+.status-online  { color:#00ff88; font-size:10px; font-weight:bold; }
+.status-offline { color:#ff4444; font-size:10px; font-weight:bold; }
+.camera-feed { width:100%; aspect-ratio:4/3; background:#080d1a; border:1px solid #1e3a5f; border-radius:8px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
+.camera-feed img { width:100%; height:100%; object-fit:cover; border-radius:8px; }
+.camera-placeholder { text-align:center; color:#2a4a6f; }
+.camera-overlay { position:absolute; top:8px; left:8px; background:rgba(10,14,26,0.8); padding:4px 8px; border-radius:4px; font-size:10px; }
+.live-dot { width:6px; height:6px; border-radius:50%; background:#00ff88; display:inline-block; animation:pulse 1s infinite; margin-right:4px; }
+.empty-state { color:#2a4a6f; font-size:12px; text-align:center; padding:24px; }
+.log-scroll { max-height:320px; overflow-y:auto; }
+.log-scroll::-webkit-scrollbar { width:4px; }
+.log-scroll::-webkit-scrollbar-track { background:#0a0e1a; }
+.log-scroll::-webkit-scrollbar-thumb { background:#1e3a5f; border-radius:2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="d-flex align-items-center gap-3">
+    <div><span class="logo-dot"></span><span class="logo-text">CASH READER</span><span class="logo-sub">IOT MONITORING</span></div>
+    <div style="font-size:9px; color:#2a4a6f; letter-spacing:1px;">RPi 4 — YOLO11s NCNN — IDR/MYR/SGD</div>
+  </div>
+  <div class="d-flex align-items-center gap-3">
+    <span style="font-size:10px; color:#2a4a6f;" id="clock"></span>
+    <div id="conn-status" style="font-size:10px; color:#00ff88;">
+      <span class="live-dot"></span>CONNECTED
+    </div>
+    <a href="/logout" class="nav-link-custom">LOGOUT →</a>
+  </div>
+</div>
+
+<div class="container-fluid p-3">
+
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="metric-card mc-green">
+        <div class="metric-label">TOTAL DETEKSI</div>
+        <div class="metric-value" id="total">0<span class="metric-unit">scans</span></div>
+        <div class="metric-sub">● Live count</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card mc-blue">
+        <div class="metric-label">AVG CONFIDENCE</div>
+        <div class="metric-value" id="avg-conf">0<span class="metric-unit">%</span></div>
+        <div class="metric-sub">● YOLO11s NCNN</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card mc-amber">
+        <div class="metric-label">DETEKSI IDR</div>
+        <div class="metric-value" id="idr-count">0<span class="metric-unit">scans</span></div>
+        <div class="metric-sub">● Rupiah Indonesia</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="metric-card mc-pink">
+        <div class="metric-label">DETEKSI MYR + SGD</div>
+        <div class="metric-value" id="foreign-count">0<span class="metric-unit">scans</span></div>
+        <div class="metric-sub">● Foreign currency</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-3">
+    <div class="col-md-5">
+      <div class="panel">
+        <div class="panel-title">
+          LOG DETEKSI TERBARU
+          <span><span class="live-dot"></span>REAL-TIME</span>
+        </div>
+        <div class="log-scroll">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>WAKTU</th>
+                <th>NOMINAL</th>
+                <th>CURRENCY</th>
+                <th>CONF</th>
+              </tr>
+            </thead>
+            <tbody id="log-body">
+              <tr><td colspan="4" class="empty-state">Menunggu data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE CAMERA — MJPEG STREAM -->
+    <div class="col-md-4">
+      <div class="panel">
+        <div class="panel-title">
+          LIVE CAMERA FEED
+          <span id="cam-label" style="color:#00ff88; font-size:10px;">● LIVE</span>
+        </div>
+        <div class="camera-feed" id="camera-container">
+          <img id="stream-img"
+               src="/api/stream"
+               style="width:100%;height:100%;object-fit:cover;border-radius:8px;"
+               alt="Live Camera Feed"
+               onerror="showCameraOffline()">
+          <div class="camera-overlay">
+            <span class="live-dot"></span>
+            <span style="color:#00ff88;font-size:10px;">LIVE</span>
+          </div>
+        </div>
+        <div class="mt-2" style="font-size:10px; color:#2a4a6f; text-align:center;">
+          MJPEG realtime stream — UGREEN Camera 4K
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="panel">
+        <div class="panel-title">DISTRIBUSI MATA UANG</div>
+        <div style="position:relative; height:180px;">
+          <canvas id="currencyChart" role="img" aria-label="Distribusi deteksi per mata uang">IDR MYR SGD chart</canvas>
+        </div>
+        <div class="mt-3">
+          <div class="d-flex justify-content-between mb-1" style="font-size:11px;">
+            <span style="color:#00ff88;">🇮🇩 IDR</span>
+            <span><span id="idr-num" style="color:#e0e8ff;">0</span> <span id="idr-pct" style="color:#4a6fa5;">0%</span></span>
+          </div>
+          <div class="d-flex justify-content-between mb-1" style="font-size:11px;">
+            <span style="color:#378add;">🇲🇾 MYR</span>
+            <span><span id="myr-num" style="color:#e0e8ff;">0</span> <span id="myr-pct" style="color:#4a6fa5;">0%</span></span>
+          </div>
+          <div class="d-flex justify-content-between" style="font-size:11px;">
+            <span style="color:#ffaa00;">🇸🇬 SGD</span>
+            <span><span id="sgd-num" style="color:#e0e8ff;">0</span> <span id="sgd-pct" style="color:#4a6fa5;">0%</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-5">
+      <div class="panel">
+        <div class="panel-title">
+          AKURASI PER KELAS
+          <span style="font-size:9px; color:#378add;">YOLO11s — mAP@50: 99.5%</span>
+        </div>
+        <div id="accuracy-list">
+          <div style="font-size:10px; color:#4a6fa5; margin-bottom:8px; letter-spacing:1px;">IDR — RUPIAH INDONESIA</div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 100.000</span><span style="color:#00ff88;">98.5%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:98.5%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 50.000</span><span style="color:#00ff88;">97.2%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:97.2%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 20.000</span><span style="color:#00ff88;">95.8%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:95.8%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 10.000</span><span style="color:#00ff88;">94.1%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:94.1%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 5.000</span><span style="color:#00ff88;">96.5%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:96.5%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 2.000</span><span style="color:#00ff88;">97.7%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:97.7%; background:#00ff88;"></div></div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">IDR 1.000</span><span style="color:#00ff88;">99.3%</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:99.3%; background:#00ff88;"></div></div>
+          <div style="font-size:10px; color:#4a6fa5; margin-bottom:8px; margin-top:4px; letter-spacing:1px;">MYR — RINGGIT MALAYSIA</div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">MYR (coming soon)</span><span style="color:#378add;">—</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:0%; background:#378add;"></div></div>
+          <div style="font-size:10px; color:#4a6fa5; margin-bottom:8px; margin-top:4px; letter-spacing:1px;">SGD — DOLAR SINGAPURA</div>
+          <div class="d-flex justify-content-between" style="font-size:11px; margin-bottom:4px;"><span style="color:#4a6fa5;">SGD (coming soon)</span><span style="color:#ffaa00;">—</span></div>
+          <div class="acc-bar"><div class="acc-fill" style="width:0%; background:#ffaa00;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="panel">
+        <div class="panel-title">GRAFIK AKURASI PER KELAS IDR</div>
+        <div style="position:relative; height:260px;">
+          <canvas id="accuracyChart" role="img" aria-label="Grafik akurasi per kelas">Akurasi bar chart</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="panel">
+        <div class="panel-title">STATUS PERANGKAT</div>
+        <div class="device-card">
+          <div class="device-icon">🖥️</div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#e0e8ff;">Raspberry Pi 4</div>
+            <div style="font-size:10px; color:#2a4a6f;">4GB RAM — YOLO11s</div>
+          </div>
+          <div id="rpi-status" class="status-offline">● OFFLINE</div>
+        </div>
+        <div class="device-card">
+          <div class="device-icon">📷</div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#e0e8ff;">UGREEN Camera 4K</div>
+            <div style="font-size:10px; color:#2a4a6f;">USB — /dev/video0</div>
+          </div>
+          <div id="cam-status" class="status-offline">● OFFLINE</div>
+        </div>
+        <div class="device-card">
+          <div class="device-icon">🔊</div>
+          <div style="flex:1;">
+            <div style="font-size:12px; color:#e0e8ff;">Speaker Output</div>
+            <div style="font-size:10px; color:#2a4a6f;">Jack 3.5mm — TTS</div>
+          </div>
+          <div id="spk-status" class="status-offline">● OFFLINE</div>
+        </div>
+        <div style="margin-top:12px;">
+          <div class="d-flex justify-content-between mb-1" style="font-size:10px; color:#2a4a6f;">
+            <span>CPU USAGE</span><span id="cpu-pct" style="color:#00ff88;">0%</span>
+          </div>
+          <div class="acc-bar" style="margin-bottom:8px;">
+            <div class="acc-fill" id="cpu-bar" style="width:0%; background:#00ff88;"></div>
+          </div>
+          <div class="d-flex justify-content-between mb-1" style="font-size:10px; color:#2a4a6f;">
+            <span>RAM USAGE</span><span id="ram-pct" style="color:#378add;">0%</span>
+          </div>
+          <div class="acc-bar">
+            <div class="acc-fill" id="ram-bar" style="width:0%; background:#378add;"></div>
+          </div>
+        </div>
+        <div style="font-size:9px; color:#1e3a5f; margin-top:8px;" id="last-seen">Last seen: -</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== CAMERA OFFLINE HANDLER =====
+function showCameraOffline() {
+  document.getElementById('camera-container').innerHTML = `
+    <div class="camera-placeholder">
+      <div style="font-size:40px; margin-bottom:12px;">📷</div>
+      <div style="font-size:12px; letter-spacing:1px;">UGREEN Camera 4K</div>
+      <div style="font-size:10px; margin-top:6px;">Stream tidak tersedia...</div>
+    </div>`;
+  document.getElementById('cam-label').textContent = '● OFFLINE';
+  document.getElementById('cam-label').style.color = '#ff4444';
+}
+
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleString('id-ID');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+const ctxC = document.getElementById('currencyChart').getContext('2d');
+const currencyChart = new Chart(ctxC, {
+  type: 'doughnut',
+  data: {
+    labels: ['IDR','MYR','SGD'],
+    datasets: [{
+      data: [0,0,0],
+      backgroundColor: ['#00ff8833','#378add33','#ffaa0033'],
+      borderColor: ['#00ff88','#378add','#ffaa00'],
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: { legend: { display: false } }
+  }
+});
+
+const ctxA = document.getElementById('accuracyChart').getContext('2d');
+const accuracyChart = new Chart(ctxA, {
+  type: 'bar',
+  data: {
+    labels: ['100K','50K','20K','10K','5K','2K','1K'],
+    datasets: [{
+      label: 'Akurasi (%)',
+      data: [98.5, 97.2, 95.8, 94.1, 96.5, 97.7, 99.3],
+      backgroundColor: '#00ff8844',
+      borderColor: '#00ff88',
+      borderWidth: 1.5,
+      borderRadius: 4
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color:'#2a4a6f', font:{ size:9 } }, grid: { color:'#1e3a5f44' }, border: { color:'#1e3a5f' } },
+      y: { min: 80, max: 100, ticks: { color:'#2a4a6f', font:{ size:9 }, callback: v => v+'%' }, grid: { color:'#1e3a5f44' }, border: { color:'#1e3a5f' } }
+    }
+  }
+});
+
+async function fetchStats() {
+  try {
+    const res  = await fetch('/api/stats');
+    const data = await res.json();
+    const total = data.total || 1;
+    document.getElementById('total').innerHTML = data.total + '<span class="metric-unit">scans</span>';
+    document.getElementById('avg-conf').innerHTML = data.avg_confidence + '<span class="metric-unit">%</span>';
+    document.getElementById('idr-count').innerHTML = data.IDR + '<span class="metric-unit">scans</span>';
+    document.getElementById('foreign-count').innerHTML = (data.MYR + data.SGD) + '<span class="metric-unit">scans</span>';
+    document.getElementById('idr-num').textContent = data.IDR;
+    document.getElementById('myr-num').textContent = data.MYR;
+    document.getElementById('sgd-num').textContent = data.SGD;
+    document.getElementById('idr-pct').textContent = Math.round(data.IDR/total*100)+'%';
+    document.getElementById('myr-pct').textContent = Math.round(data.MYR/total*100)+'%';
+    document.getElementById('sgd-pct').textContent = Math.round(data.SGD/total*100)+'%';
+    currencyChart.data.datasets[0].data = [data.IDR, data.MYR, data.SGD];
+    currencyChart.update();
+  } catch(e) { console.log('Stats error:', e); }
+}
+
+async function fetchLogs() {
+  try {
+    const res  = await fetch('/api/logs');
+    const data = await res.json();
+    const tbody = document.getElementById('log-body');
+    if (!data.logs || data.logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Belum ada log deteksi</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.logs.slice(0,20).map(log => {
+      const curr = log.currency || '';
+      const conf = parseFloat(log.confidence || 0) * 100;
+      const confColor = conf > 90 ? '#00ff88' : conf > 70 ? '#ffaa00' : '#ff4444';
+      const time = log.timestamp ? log.timestamp.split(' ')[1] : '-';
+      return `<tr>
+        <td style="color:#2a4a6f; font-size:10px;">${time}</td>
+        <td style="color:#e0e8ff;">${log.nominal || '-'}</td>
+        <td><span class="currency-badge ${curr.toLowerCase()}">${curr}</span></td>
+        <td>
+          <span style="color:${confColor}; font-size:11px;">${conf.toFixed(1)}%</span>
+          <div class="conf-bar"><div class="conf-fill" style="width:${conf}%; background:${confColor};"></div></div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.log('Logs error:', e); }
+}
+
+async function fetchDevice() {
+  try {
+    const res  = await fetch('/api/device');
+    const data = await res.json();
+    const isOnline = data.status === 'online';
+    const cameraOnline = data.camera === true;
+    const speakerOnline = data.speaker === true;
+
+  // Raspberry Pi
+    document.getElementById('rpi-status').textContent =
+      isOnline ? '● ONLINE' : '● OFFLINE';
+
+  document.getElementById('rpi-status').className =
+      isOnline ? 'status-online' : 'status-offline';
+
+  // Camera
+  document.getElementById('cam-status').textContent =
+      cameraOnline ? '● ACTIVE' : '● OFFLINE';
+
+  document.getElementById('cam-status').className =
+      cameraOnline ? 'status-online' : 'status-offline';
+
+  // Speaker
+  document.getElementById('spk-status').textContent =
+      speakerOnline ? '● ACTIVE' : '● OFFLINE';
+
+document.getElementById('spk-status').className =
+    speakerOnline ? 'status-online' : 'status-offline';
+    if (data.cpu !== undefined) {
+      document.getElementById('cpu-bar').style.width = data.cpu + '%';
+      document.getElementById('cpu-pct').textContent = data.cpu + '%';
+    }
+    if (data.ram !== undefined) {
+      document.getElementById('ram-bar').style.width = data.ram + '%';
+      document.getElementById('ram-pct').textContent = data.ram + '%';
+    }
+    if (data.last_seen) {
+      document.getElementById('last-seen').textContent = 'Last seen: ' + data.last_seen;
+    }
+  } catch(e) { console.log('Device error:', e); }
+}
+
+function refresh() {
+  fetchStats();
+  fetchLogs();
+  fetchDevice();
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
